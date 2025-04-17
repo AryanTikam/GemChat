@@ -1,0 +1,86 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini AI Chat Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-robot"></i>
+                <h1>GemChat</h1>
+            </div>
+            <button id="new-chat" class="new-chat-btn">
+                <i class="fas fa-plus"></i> New Chat
+            </button>
+            <div class="features">
+                <h3>Features</h3>
+                <ul>
+                    <li><i class="fas fa-file-pdf"></i> PDF Analysis</li>
+                    <li><i class="fas fa-file-archive"></i> ZIP Extraction</li>
+                    <li><i class="fas fa-file-csv"></i> CSV Processing</li>
+                    <li><i class="fas fa-file-code"></i> JSON Parsing</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="chat-container" id="chat-container">
+                <div class="welcome-message">
+                    <h2>Welcome to Gemini AI Assistant</h2>
+                    <p>Upload files or ask questions to get started</p>
+                    <div class="file-type-icons">
+                        <div class="file-type"><i class="fas fa-file-pdf"></i> PDF</div>
+                        <div class="file-type"><i class="fas fa-file-archive"></i> ZIP</div>
+                        <div class="file-type"><i class="fas fa-file-csv"></i> CSV</div>
+                        <div class="file-type"><i class="fas fa-file-code"></i> JSON</div>
+                    </div>
+                </div>
+
+                <!-- Chat messages will be populated here -->
+                {% for interaction in chat_history %}
+                <div class="message user-message">
+                    <div class="message-content">
+                        <p>{{ interaction.user_message }}</p>
+                        {% if interaction.file %}
+                        <div class="file-indicator">
+                            <i class="fas fa-paperclip"></i> {{ interaction.file.filename }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="message bot-message">
+                    <div class="message-content">
+                        <div class="markdown-content">{{ interaction.bot_response | safe }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="input-container">
+                <form id="chat-form" enctype="multipart/form-data">
+                    <label for="file-upload" class="file-upload-btn">
+                        <i class="fas fa-paperclip"></i>
+                    </label>
+                    <input type="file" id="file-upload" name="file" style="display: none;">
+                    <div class="file-preview" id="file-preview"></div>
+                    <input type="text" id="user-input" placeholder="Ask something..." autocomplete="off">
+                    <button type="submit" id="send-btn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
