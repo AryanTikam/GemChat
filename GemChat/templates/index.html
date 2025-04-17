@@ -26,6 +26,9 @@
                     <li><i class="fas fa-file-archive"></i> ZIP Extraction</li>
                     <li><i class="fas fa-file-csv"></i> CSV Processing</li>
                     <li><i class="fas fa-file-code"></i> JSON Parsing</li>
+                    <li><i class="fas fa-image"></i> Image OCR</li>
+                    <li><i class="fas fa-music"></i> Audio Transcription</li>
+                    <li><i class="fas fa-video"></i> Video Analysis</li>
                 </ul>
             </div>
         </div>
@@ -40,6 +43,9 @@
                         <div class="file-type"><i class="fas fa-file-archive"></i> ZIP</div>
                         <div class="file-type"><i class="fas fa-file-csv"></i> CSV</div>
                         <div class="file-type"><i class="fas fa-file-code"></i> JSON</div>
+                        <div class="file-type"><i class="fas fa-image"></i> Images</div>
+                        <div class="file-type"><i class="fas fa-music"></i> Audio</div>
+                        <div class="file-type"><i class="fas fa-video"></i> Video</div>
                     </div>
                 </div>
 
@@ -64,11 +70,11 @@
             </div>
             
             <div class="input-container">
-                <form id="chat-form" enctype="multipart/form-data">
+                <form id="chat-form" method="post" enctype="multipart/form-data">
                     <label for="file-upload" class="file-upload-btn">
                         <i class="fas fa-paperclip"></i>
                     </label>
-                    <input type="file" id="file-upload" name="file" style="display: none;">
+                    <input type="file" id="file-upload" name="file" style="display: none;" accept=".pdf,.csv,.json,.txt,.py,.js,.html,.css,.zip,.jpg,.jpeg,.png,.gif,.bmp,.tiff,.mp3,.wav,.ogg,.flac,.mp4,.avi,.mov,.mkv">
                     <div class="file-preview" id="file-preview"></div>
                     <input type="text" id="user-input" placeholder="Ask something..." autocomplete="off">
                     <button type="submit" id="send-btn">

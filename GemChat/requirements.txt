@@ -3,3 +3,10 @@ python-dotenv
 pdfplumber 
 pandas
 flask
+pytesseract
+SpeechRecognition
+pydub
+opencv-python
+moviepy
+langchain
+langchain_google_genai

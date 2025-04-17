@@ -20,20 +20,98 @@ document.addEventListener('DOMContentLoaded', function() {
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
     
-    // Display selected file
+    // Get file icon based on file type
+    function getFileIcon(fileName) {
+        const extension = fileName.split('.').pop().toLowerCase();
+        
+        // Map file extensions to Font Awesome icons
+        const iconMap = {
+            // Documents
+            'pdf': 'fa-file-pdf',
+            'txt': 'fa-file-alt',
+            
+            // Data
+            'csv': 'fa-file-csv',
+            'json': 'fa-file-code',
+            
+            // Archives
+            'zip': 'fa-file-archive',
+            
+            // Code
+            'py': 'fa-file-code',
+            'js': 'fa-file-code',
+            'html': 'fa-file-code',
+            'css': 'fa-file-code',
+            
+            // Images
+            'jpg': 'fa-image',
+            'jpeg': 'fa-image',
+            'png': 'fa-image',
+            'gif': 'fa-image',
+            'bmp': 'fa-image',
+            'tiff': 'fa-image',
+            
+            // Audio
+            'mp3': 'fa-music',
+            'wav': 'fa-music',
+            'ogg': 'fa-music',
+            'flac': 'fa-music',
+            
+            // Video
+            'mp4': 'fa-video',
+            'avi': 'fa-video',
+            'mov': 'fa-video',
+            'mkv': 'fa-video'
+        };
+        
+        const iconClass = iconMap[extension] || 'fa-file';
+        return `<i class="fas ${iconClass}"></i>`;
+    }
+    
+    // Display selected file with appropriate icon
     fileUpload.addEventListener('change', function() {
         if (this.files.length > 0) {
             const file = this.files[0];
+            const fileSize = (file.size / 1024).toFixed(2);
+            const fileIcon = getFileIcon(file.name);
+            
             filePreview.innerHTML = `
-                <span class="file-name">${file.name}</span>
-                <span class="remove-file">&times;</span>
+                <div class="file-badge">
+                    ${fileIcon}
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-size">(${fileSize} KB)</span>
+                    <span class="remove-file">&times;</span>
+                </div>
             `;
             
             // Add click event to remove file button
-            document.querySelector('.remove-file').addEventListener('click', function() {
+            document.querySelector('.remove-file').addEventListener('click', function(e) {
+                e.stopPropagation();
                 fileUpload.value = '';
                 filePreview.innerHTML = '';
             });
+            
+            // Show file type specific message
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            const processingMessages = {
+                'pdf': 'PDF will be analyzed for text content',
+                'csv': 'CSV data will be parsed and analyzed',
+                'json': 'JSON structure will be parsed',
+                'jpg': 'Image will be processed with OCR to extract text',
+                'jpeg': 'Image will be processed with OCR to extract text',
+                'png': 'Image will be processed with OCR to extract text',
+                'mp3': 'Audio will be transcribed to text',
+                'wav': 'Audio will be transcribed to text',
+                'mp4': 'Video will be analyzed for frames and audio',
+                'zip': 'ZIP archive will be extracted and contents analyzed'
+            };
+            
+            if (processingMessages[fileExt]) {
+                const processingInfo = document.createElement('div');
+                processingInfo.className = 'processing-info';
+                processingInfo.innerHTML = `<i class="fas fa-info-circle"></i> ${processingMessages[fileExt]}`;
+                filePreview.appendChild(processingInfo);
+            }
         }
     });
     
@@ -55,11 +133,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     <p>${message}</p>
                     ${fileUpload.files.length > 0 ? `
                         <div class="file-indicator">
-                            <i class="fas fa-paperclip"></i> ${fileUpload.files[0].name}
+                            ${getFileIcon(fileUpload.files[0].name)}
+                            <span>${fileUpload.files[0].name}</span>
                         </div>
                     ` : ''}
                 </div>
             `;
+        } else if (sender === 'system') {
+            messageContent = `
+                <div class="message-content system-message">
+                    <p>${message}</p>
+                </div>
+            `;
+            messageDiv.classList.add('system');
         } else {
             // Convert markdown to HTML for bot messages
             const htmlContent = converter.makeHtml(message);
@@ -85,64 +171,64 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Handle form submission
     chatForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const message = userInput.value.trim();
-        if (!message && fileUpload.files.length === 0) return;
-        
-        // Add user message to chat
-        if (message) {
-            addMessageToChat(message, 'user');
+        e.preventDefault()
+    
+        console.log('[chat] submit handler fired')
+        const message = userInput.value.trim()
+        const hasFile = fileUpload.files.length > 0
+    
+        // guard: must have a message or a file
+        if (!message && !hasFile) {
+            console.log('[chat] nothing to send, aborting')
+            return
         }
-        
-        // Create form data
-        const formData = new FormData();
-        formData.append('message', message);
-        
-        if (fileUpload.files.length > 0) {
-            formData.append('file', fileUpload.files[0]);
+    
+        // show user’s own message (if any)
+        if (message) addMessageToChat(message, 'user')
+    
+        // build formData
+        const formData = new FormData()
+        formData.append('message', message)
+        if (hasFile) {
+            const file = fileUpload.files[0]
+            console.log(`[chat] attaching file ${file.name}`, file)
+            formData.append('file', file)
+            // you can leave your “system” status‐messages here …
         }
-        
-        // Show thinking animation
-        const thinkingDiv = document.createElement('div');
-        thinkingDiv.classList.add('message', 'bot-message');
-        thinkingDiv.innerHTML = `
-            <div class="message-content">
-                <div class="thinking">
-                    <span>Thinking</span>
-                    <span class="dot">.</span>
-                    <span class="dot">.</span>
-                    <span class="dot">.</span>
-                </div>
-            </div>
-        `;
-        chatContainer.appendChild(thinkingDiv);
-        scrollToBottom();
-        
-        // Clear input and file
-        userInput.value = '';
-        fileUpload.value = '';
-        filePreview.innerHTML = '';
-        
+    
+        // thinking animation
+        const thinkingDiv = document.createElement('div')
+        thinkingDiv.classList.add('message','bot-message','thinking-message')
+        thinkingDiv.innerHTML = `<div class="message-content">…Thinking…</div>`
+        chatContainer.appendChild(thinkingDiv)
+        scrollToBottom()
+    
         try {
-            // Send request to server
-            const response = await fetch('/chat', {
+            console.log('[chat] sending POST /chat')
+            const res = await fetch('/chat', {
                 method: 'POST',
                 body: formData
-            });
-            
-            const data = await response.json();
-            
-            // Remove thinking animation
-            chatContainer.removeChild(thinkingDiv);
-            
-            // Add bot response to chat
-            addMessageToChat(data.response, 'bot');
-            
-        } catch (error) {
-            console.error('Error:', error);
-            chatContainer.removeChild(thinkingDiv);
-            addMessageToChat('Sorry, there was an error processing your request. Please try again.', 'bot');
+            })
+            console.log('[chat] got response', res.status)
+    
+            const data = await res.json()
+    
+            // remove thinking
+            thinkingDiv.remove()
+            // remove any lingering system msgs
+            document.querySelectorAll('.system').forEach(el => el.remove())
+    
+            addMessageToChat(data.response, 'bot')
+    
+        } catch (err) {
+            console.error('[chat] fetch error', err)
+            thinkingDiv.remove()
+            addMessageToChat('Error sending request. See console.', 'bot')
+        } finally {
+            // *only now* clear inputs
+            userInput.value = ''
+            fileUpload.value = ''
+            filePreview.innerHTML = ''
         }
     });
     
@@ -163,12 +249,77 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="file-type"><i class="fas fa-file-archive"></i> ZIP</div>
                         <div class="file-type"><i class="fas fa-file-csv"></i> CSV</div>
                         <div class="file-type"><i class="fas fa-file-code"></i> JSON</div>
+                        <div class="file-type"><i class="fas fa-image"></i> Images</div>
+                        <div class="file-type"><i class="fas fa-music"></i> Audio</div>
+                        <div class="file-type"><i class="fas fa-video"></i> Video</div>
                     </div>
                 </div>
             `;
             
         } catch (error) {
             console.error('Error clearing chat history:', error);
+            addMessageToChat('Failed to clear chat history. Please refresh the page.', 'system');
+        }
+    });
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+Enter or Cmd+Enter to submit
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+        
+        // Escape to clear input
+        if (e.key === 'Escape') {
+            userInput.value = '';
+            fileUpload.value = '';
+            filePreview.innerHTML = '';
+            userInput.focus();
+        }
+        
+        // Ctrl+N or Cmd+N for new chat
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault(); // Prevent new browser window
+            newChatBtn.click();
+        }
+        
+        // Ctrl+U or Cmd+U to open file upload
+        if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+            e.preventDefault();
+            fileUpload.click();
+        }
+    });
+    
+    // Focus input on page load
+    userInput.focus();
+    
+    // Auto-resize input field as user types
+    userInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        const maxHeight = 150; // Maximum height before scrolling
+        this.style.height = Math.min(this.scrollHeight, maxHeight) + 'px';
+    });
+    
+    // Paste image from clipboard
+    document.addEventListener('paste', function(e) {
+        const clipboardData = e.clipboardData || window.clipboardData;
+        const items = clipboardData.items;
+        
+        if (!items) return;
+        
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                const fileList = new DataTransfer();
+                fileList.items.add(blob);
+                
+                // Set file to input and trigger change event
+                fileUpload.files = fileList.files;
+                fileUpload.dispatchEvent(new Event('change'));
+                
+                e.preventDefault();
+                break;
+            }
         }
     });
     
@@ -182,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, 500);
 
-    // Additional CSS for thinking animation
+    // Additional CSS for the new elements
     const style = document.createElement('style');
     style.textContent = `
         .thinking {
@@ -205,6 +356,212 @@ document.addEventListener('DOMContentLoaded', function() {
         .thinking .dot:nth-child(3) {
             animation-delay: 0.4s;
         }
+        
+        .file-badge {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 6px 10px;
+            border-radius: 30px;
+            margin-right: 10px;
+            max-width: 100%;
+            overflow: hidden;
+        }
+        
+        .file-badge i {
+            margin-right: 8px;
+        }
+        
+        .file-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 150px;
+        }
+        
+        .file-size {
+            color: #888;
+            font-size: 0.8em;
+            margin-left: 5px;
+        }
+        
+        .remove-file {
+            margin-left: 8px;
+            cursor: pointer;
+            color: #ff5555;
+            font-weight: bold;
+        }
+        
+        .file-indicator {
+            display: flex;
+            align-items: center;
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 5px;
+        }
+        
+        .file-indicator i {
+            margin-right: 5px;
+        }
+        
+        .processing-info {
+            font-size: 0.8em;
+            color: #555;
+            margin-top: 5px;
+            padding: 5px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 5px;
+        }
+        
+        .system-message {
+            background-color: rgba(255, 193, 7, 0.1) !important;
+            border-left: 3px solid #ffc107;
+            color: #8a6d3b !important;
+        }
+        
+        /* File Processing Progress Indicator */
+        .file-progress {
+            height: 4px;
+            width: 100%;
+            background: #e9ecef;
+            border-radius: 2px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .file-progress-bar {
+            height: 100%;
+            background: var(--primary-color);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            animation: progress-animation 1.5s infinite ease-in-out;
+        }
+        
+        @keyframes progress-animation {
+            0% { width: 10%; }
+            50% { width: 80%; }
+            100% { width: 10%; }
+        }
+        
+        /* Empty state styling */
+        .empty-chat {
+            text-align: center;
+            color: var(--light-text);
+            padding: 20px;
+        }
+        
+        .empty-chat i {
+            font-size: 48px;
+            color: #ddd;
+            margin-bottom: 15px;
+        }
     `;
     document.head.appendChild(style);
+    
+    // Add active animation for send button
+    const sendBtn = document.getElementById('send-btn');
+    sendBtn.addEventListener('mousedown', function() {
+        this.classList.add('sending');
+    });
+    
+    sendBtn.addEventListener('mouseup', function() {
+        this.classList.remove('sending');
+    });
+    
+    // Add file drop area
+    const dropArea = document.createElement('div');
+    dropArea.className = 'file-drop-area';
+    dropArea.innerHTML = `
+        <div class="drop-message">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Drop file here to upload</p>
+        </div>
+    `;
+    document.body.appendChild(dropArea);
+    
+    // File drag and drop handlers
+    document.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        dropArea.classList.add('active');
+    });
+    
+    document.addEventListener('dragleave', function(e) {
+        const rect = dropArea.getBoundingClientRect();
+        if (
+            e.clientX < rect.left ||
+            e.clientX >= rect.right ||
+            e.clientY < rect.top ||
+            e.clientY >= rect.bottom
+        ) {
+            dropArea.classList.remove('active');
+        }
+    });
+    
+    document.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropArea.classList.remove('active');
+        
+        if (e.dataTransfer.files.length) {
+            fileUpload.files = e.dataTransfer.files;
+            fileUpload.dispatchEvent(new Event('change'));
+        }
+    });
+    
+    // Add additional styles for drop area
+    const dropStyles = document.createElement('style');
+    dropStyles.textContent = `
+        .file-drop-area {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(108, 99, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .file-drop-area.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .drop-message {
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .drop-message i {
+            font-size: 48px;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        
+        .drop-message p {
+            font-size: 18px;
+            color: var(--text-color);
+        }
+        
+        .sending {
+            transform: scale(0.9);
+        }
+    `;
+    document.head.appendChild(dropStyles);
+    
+    // Handle initial messages if any
+    document.querySelectorAll('.markdown-content pre code').forEach((block) => {
+        hljs.highlightElement(block);
+    });
+    
+    // Scroll to bottom on initial load
+    scrollToBottom();
 });
