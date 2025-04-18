@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Clear chat and add welcome message
             chatContainer.innerHTML = `
                 <div class="welcome-message">
-                    <h2>Welcome to Gemini AI Assistant</h2>
+                    <h2>Welcome to GemChat</h2>
                     <p>Upload files or ask questions to get started</p>
                     <div class="file-type-icons">
                         <div class="file-type"><i class="fas fa-file-pdf"></i> PDF</div>
