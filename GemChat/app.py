@@ -18,8 +18,7 @@ import cv2
 import numpy as np
 import moviepy as mp
 import concurrent.futures
-
-# LangChain imports
+from datetime import datetime
 from langchain.memory import ConversationBufferMemory, ChatMessageHistory
 from langchain.schema import HumanMessage, AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -77,6 +76,38 @@ def get_conversation_chain(history=None):
     
     return chain
 
+def classify_query(llm, query):
+    """Use the LLM to classify the user's query."""
+    classification_prompt = """
+    You are an AI assistant. Classify the following query into one of the following categories:
+    - "date_query" if the query is related to dates (e.g., asking for today's date or calculating date differences).
+    - "file_query" if the query is related to uploaded files.
+    - "general_query" for any other type of question.
+
+    Query: {query}
+    Classification:
+    """
+    prompt = classification_prompt.format(query=query)
+    response = llm.predict(prompt) 
+    return response.strip().lower()
+
+def handle_date_query(query):
+    """Provide the LLM with the current date and time to handle date-related queries."""
+    # Get the current date and time
+    now = datetime.now()
+    current_date = now.strftime('%A, %d %B %Y')
+    current_time = now.strftime('%H:%M:%S')
+
+    # Provide the LLM with the query, current date/time, and conversation history
+    date_prompt = f"""
+    You are an AI assistant. The user has asked a date-related question. Use the following information to answer:
+    - Current date: {current_date}
+    - Current time: {current_time}
+
+    User's query: {query}
+    """
+    return date_prompt.strip()
+
 def extract_text_from_pdf(file):
     text = ""
     try:
@@ -90,7 +121,15 @@ def extract_text_from_pdf(file):
 def process_image(file):
     """Extract text from images using OCR and perform basic analysis"""
     try:
+        # Reset file pointer
+        file.seek(0)
+        
+        # Open the image
         image = Image.open(file)
+        
+        # Validate image format
+        if image.format not in ['JPEG', 'PNG', 'BMP', 'TIFF']:
+            return "Unsupported image format."
         
         # Create a summary of image properties
         image_info = {
@@ -111,13 +150,19 @@ def process_image(file):
             result += "No text detected in the image.\n"
             
         # Save a compressed version if it's a large image
-        if os.path.getsize(file.name) > 1000000:  # If larger than 1MB
+        file.seek(0)
+        file_size = len(file.read())  # Get file size in memory
+        if file_size > 1000000:  # If larger than 1MB
             output = BytesIO()
             image.save(output, format=image.format, optimize=True, quality=85)
-            compression_ratio = os.path.getsize(file.name) / output.tell()
+            compression_ratio = file_size / output.tell()
             result += f"\nImage compressed by {compression_ratio:.2f}x"
         
         return result
+    except IOError as e:
+        return f"Error opening image: {str(e)}"
+    except pytesseract.TesseractError as e:
+        return f"Error with Tesseract OCR: {str(e)}"
     except Exception as e:
         return f"Error processing image: {str(e)}"
 
@@ -409,40 +454,47 @@ def chat():
             "type": os.path.splitext(file.filename)[1][1:].upper()
         }
     
-    # Prepare the input for the LangChain conversation with better guidance
-    if file_content:
+    # Initialize the LLM
+    llm = get_langchain_model()
+    
+    # Classify the query
+    query_type = classify_query(llm, user_message)
+    
+    # Initialize or restore chat history
+    if 'memory_messages' not in session:
+        session['memory_messages'] = []
+    
+    chat_history = ChatMessageHistory()
+    for msg in session['memory_messages']:
+        if msg['type'] == 'human':
+            chat_history.add_user_message(msg['content'])
+        else:
+            chat_history.add_ai_message(msg['content'])
+    
+    # Reuse the conversation chain with the existing memory
+    conversation = get_conversation_chain(chat_history)
+    
+    if query_type == "date_query":
+        # Handle date-related queries
+        input_text = handle_date_query(user_message)
+    elif query_type == "file_query" and file_content:
+        # Handle file-related queries
         ext = os.path.splitext(file.filename)[1].lower()
-        
         if ext == '.zip':
             input_text = f"I've uploaded a ZIP file: {file.filename}. Here's the extracted content: {file_content}. Based on the above extracted content from the ZIP file, please answer this specific question: {user_message}. If the question refers to specific files or data within the ZIP, please focus on those parts of the content."
         else:
             input_text = f"I've uploaded a file: {file.filename}. Here's the content or analysis:\n\n{file_content}\n\nMy question or request is: {user_message}"
     else:
+        # General query
         input_text = user_message
-    
-    # Initialize or restore chat history
-    chat_history = ChatMessageHistory()
-    if 'memory_messages' in session:
-        for msg in session['memory_messages']:
-            if msg['type'] == 'human':
-                chat_history.add_user_message(msg['content'])
-            else:
-                chat_history.add_ai_message(msg['content'])
-    
-    # Create conversation chain with the history
-    conversation = get_conversation_chain(chat_history)
     
     # Get response using LangChain
     gemini_response = conversation.predict(input=input_text)
     
     # Update session memory
-    messages = []
-    for msg in conversation.memory.chat_memory.messages:
-        if isinstance(msg, HumanMessage):
-            messages.append({"type": "human", "content": msg.content})
-        elif isinstance(msg, AIMessage):
-            messages.append({"type": "ai", "content": msg.content})
-    session['memory_messages'] = messages
+    session['memory_messages'].append({"type": "human", "content": user_message})
+    session['memory_messages'].append({"type": "ai", "content": gemini_response})
+    session.modified = True
     
     # Update chat history for display
     new_interaction = {
