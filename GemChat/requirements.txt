@@ -10,3 +10,4 @@ opencv-python
 moviepy
 langchain
 langchain_google_genai
+langchain_community
