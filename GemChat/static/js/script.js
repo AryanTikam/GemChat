@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileUpload = document.getElementById('file-upload');
     const filePreview = document.getElementById('file-preview');
     const newChatBtn = document.getElementById('new-chat');
+    const themeToggle = document.getElementById('theme-toggle');
     
     // Markdown converter
     const converter = new showdown.Converter({
@@ -13,6 +14,30 @@ document.addEventListener('DOMContentLoaded', function() {
         simplifiedAutoLink: true,
         strikethrough: true,
         tasklists: true
+    });
+    
+    // Dark mode toggle functionality
+    function setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }
+    
+    // Check for saved theme preference or respect OS preference
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+        setTheme(savedTheme);
+    } else {
+        // Check if user prefers dark mode
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            setTheme('dark');
+        }
+    }
+    
+    // Toggle theme
+    themeToggle.addEventListener('click', function() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
     });
     
     // Scroll to bottom of chat
@@ -171,64 +196,71 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Handle form submission
     chatForm.addEventListener('submit', async function(e) {
-        e.preventDefault()
+        e.preventDefault();
     
-        console.log('[chat] submit handler fired')
-        const message = userInput.value.trim()
-        const hasFile = fileUpload.files.length > 0
+        console.log('[chat] submit handler fired');
+        const message = userInput.value.trim();
+        const hasFile = fileUpload.files.length > 0;
     
         // guard: must have a message or a file
         if (!message && !hasFile) {
-            console.log('[chat] nothing to send, aborting')
-            return
+            console.log('[chat] nothing to send, aborting');
+            return;
         }
     
-        // show user’s own message (if any)
-        if (message) addMessageToChat(message, 'user')
+        // show user's own message (if any)
+        if (message) addMessageToChat(message, 'user');
     
         // build formData
-        const formData = new FormData()
-        formData.append('message', message)
+        const formData = new FormData();
+        formData.append('message', message);
         if (hasFile) {
-            const file = fileUpload.files[0]
-            console.log(`[chat] attaching file ${file.name}`, file)
-            formData.append('file', file)
-            // you can leave your “system” status‐messages here …
+            const file = fileUpload.files[0];
+            console.log(`[chat] attaching file ${file.name}`, file);
+            formData.append('file', file);
         }
     
-        // thinking animation
-        const thinkingDiv = document.createElement('div')
-        thinkingDiv.classList.add('message','bot-message','thinking-message')
-        thinkingDiv.innerHTML = `<div class="message-content">…Thinking…</div>`
-        chatContainer.appendChild(thinkingDiv)
-        scrollToBottom()
+        // Create thinking animation with dots
+        const thinkingDiv = document.createElement('div');
+        thinkingDiv.classList.add('message', 'bot-message', 'thinking-message');
+        thinkingDiv.innerHTML = `
+            <div class="message-content">
+                <div class="thinking-dots">
+                    <div class="thinking-dot"></div>
+                    <div class="thinking-dot"></div>
+                    <div class="thinking-dot"></div>
+                </div>
+            </div>
+        `;
+        chatContainer.appendChild(thinkingDiv);
+        scrollToBottom();
     
         try {
-            console.log('[chat] sending POST /chat')
+            console.log('[chat] sending POST /chat');
             const res = await fetch('/chat', {
                 method: 'POST',
                 body: formData
-            })
-            console.log('[chat] got response', res.status)
+            });
+            console.log('[chat] got response', res.status);
     
-            const data = await res.json()
+            const data = await res.json();
     
             // remove thinking
-            thinkingDiv.remove()
+            thinkingDiv.remove();
             // remove any lingering system msgs
-            document.querySelectorAll('.system').forEach(el => el.remove())
+            document.querySelectorAll('.system').forEach(el => el.remove());
     
-            addMessageToChat(data.response, 'bot')
+            addMessageToChat(data.response, 'bot');
     
         } catch (err) {
-            console.error('[chat] fetch error', err)
-            thinkingDiv.remove()
-            addMessageToChat('Error sending request. See console.', 'bot')
+            console.error('[chat] fetch error', err);
+            thinkingDiv.remove();
+            addMessageToChat('Error sending request. See console.', 'bot');
         } finally {
             // *only now* clear inputs
-            userInput.value = ''
-            fileUpload.value = ''
-            filePreview.innerHTML = ''
+            userInput.value = '';
+            fileUpload.value = '';
+            filePreview.innerHTML = '';
         }
     });
     
@@ -323,141 +355,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Add animated dots effect to thinking animation
-    setInterval(() => {
-        const dots = document.querySelectorAll('.thinking .dot');
-        dots.forEach((dot, index) => {
-            setTimeout(() => {
-                dot.style.opacity = (dot.style.opacity === '0' ? '1' : '0');
-            }, index * 200);
-        });
-    }, 500);
-
-    // Additional CSS for the new elements
-    const style = document.createElement('style');
-    style.textContent = `
-        .thinking {
-            display: flex;
-            align-items: center;
-        }
-        .thinking .dot {
-            margin-left: 3px;
-            font-weight: bold;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0% { opacity: 0.3; }
-            50% { opacity: 1; }
-            100% { opacity: 0.3; }
-        }
-        .thinking .dot:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-        .thinking .dot:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-        
-        .file-badge {
-            display: flex;
-            align-items: center;
-            background: rgba(0, 0, 0, 0.05);
-            padding: 6px 10px;
-            border-radius: 30px;
-            margin-right: 10px;
-            max-width: 100%;
-            overflow: hidden;
-        }
-        
-        .file-badge i {
-            margin-right: 8px;
-        }
-        
-        .file-name {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 150px;
-        }
-        
-        .file-size {
-            color: #888;
-            font-size: 0.8em;
-            margin-left: 5px;
-        }
-        
-        .remove-file {
-            margin-left: 8px;
-            cursor: pointer;
-            color: #ff5555;
-            font-weight: bold;
-        }
-        
-        .file-indicator {
-            display: flex;
-            align-items: center;
-            font-size: 0.9em;
-            color: rgba(255, 255, 255, 0.8);
-            margin-top: 5px;
-        }
-        
-        .file-indicator i {
-            margin-right: 5px;
-        }
-        
-        .processing-info {
-            font-size: 0.8em;
-            color: #555;
-            margin-top: 5px;
-            padding: 5px;
-            background: rgba(0,0,0,0.03);
-            border-radius: 5px;
-        }
-        
-        .system-message {
-            background-color: rgba(255, 193, 7, 0.1) !important;
-            border-left: 3px solid #ffc107;
-            color: #8a6d3b !important;
-        }
-        
-        /* File Processing Progress Indicator */
-        .file-progress {
-            height: 4px;
-            width: 100%;
-            background: #e9ecef;
-            border-radius: 2px;
-            margin-top: 5px;
-            overflow: hidden;
-        }
-        
-        .file-progress-bar {
-            height: 100%;
-            background: var(--primary-color);
-            border-radius: 2px;
-            transition: width 0.3s ease;
-            animation: progress-animation 1.5s infinite ease-in-out;
-        }
-        
-        @keyframes progress-animation {
-            0% { width: 10%; }
-            50% { width: 80%; }
-            100% { width: 10%; }
-        }
-        
-        /* Empty state styling */
-        .empty-chat {
-            text-align: center;
-            color: var(--light-text);
-            padding: 20px;
-        }
-        
-        .empty-chat i {
-            font-size: 48px;
-            color: #ddd;
-            margin-bottom: 15px;
-        }
-    `;
-    document.head.appendChild(style);
-    
     // Add active animation for send button
     const sendBtn = document.getElementById('send-btn');
     sendBtn.addEventListener('mousedown', function() {
@@ -506,56 +403,6 @@ document.addEventListener('DOMContentLoaded', function() {
             fileUpload.dispatchEvent(new Event('change'));
         }
     });
-    
-    // Add additional styles for drop area
-    const dropStyles = document.createElement('style');
-    dropStyles.textContent = `
-        .file-drop-area {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(108, 99, 255, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            visibility: hidden;
-            opacity: 0;
-            transition: all 0.3s ease;
-            pointer-events: none;
-        }
-        
-        .file-drop-area.active {
-            visibility: visible;
-            opacity: 1;
-        }
-        
-        .drop-message {
-            background-color: white;
-            padding: 40px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        }
-        
-        .drop-message i {
-            font-size: 48px;
-            color: var(--primary-color);
-            margin-bottom: 15px;
-        }
-        
-        .drop-message p {
-            font-size: 18px;
-            color: var(--text-color);
-        }
-        
-        .sending {
-            transform: scale(0.9);
-        }
-    `;
-    document.head.appendChild(dropStyles);
     
     // Handle initial messages if any
     document.querySelectorAll('.markdown-content pre code').forEach((block) => {

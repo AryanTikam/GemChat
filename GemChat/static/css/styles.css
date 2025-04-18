@@ -9,6 +9,50 @@
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     --border-radius: 10px;
     --transition: all 0.3s ease;
+    
+    /* Chat bubbles colors */
+    --user-bubble-bg: var(--primary-color);
+    --user-bubble-text: white;
+    --bot-bubble-bg: var(--white);
+    --bot-bubble-text: var(--text-color);
+    
+    /* Input colors */
+    --input-bg: var(--white);
+    --input-border: #eaecef;
+    --input-text: var(--text-color);
+    
+    /* Sidebar colors */
+    --sidebar-bg: var(--white);
+    --sidebar-border: #eaecef;
+    --logo-color: var(--primary-color);
+    --feature-icon-color: var(--primary-color);
+}
+
+[data-theme="dark"] {
+    --primary-color: #8480ff;
+    --secondary-color: #6c63ff;
+    --text-color: #e4e6eb;
+    --light-text: #b0b3b8;
+    --bg-color: #18191a;
+    --white: #242526;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    
+    /* Chat bubbles colors - dark mode */
+    --user-bubble-bg: #6c63ff;
+    --user-bubble-text: #ffffff;
+    --bot-bubble-bg: #3a3b3c;
+    --bot-bubble-text: #e4e6eb;
+    
+    /* Input colors - dark mode */
+    --input-bg: #3a3b3c;
+    --input-border: #4e4f50;
+    --input-text: #e4e6eb;
+    
+    /* Sidebar colors - dark mode */
+    --sidebar-bg: #242526;
+    --sidebar-border: #3a3b3c;
+    --logo-color: #8480ff;
+    --feature-icon-color: #8480ff;
 }
 
 * {
@@ -22,6 +66,7 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .app-container {
@@ -33,11 +78,12 @@ body {
 /* Sidebar Styles */
 .sidebar {
     width: 280px;
-    background-color: var(--white);
-    border-right: 1px solid #eaecef;
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border);
     padding: 20px;
     display: flex;
     flex-direction: column;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .logo {
@@ -48,13 +94,63 @@ body {
 
 .logo i {
     font-size: 28px;
-    color: var(--primary-color);
+    color: var(--logo-color);
     margin-right: 12px;
+    transition: color 0.3s ease;
 }
 
 .logo h1 {
     font-size: 20px;
     font-weight: 600;
+    color: var(--text-color);
+    transition: color 0.3s ease;
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.theme-toggle {
+    position: relative;
+    width: 60px;
+    height: 30px;
+    border-radius: 15px;
+    background-color: #3a3b3c;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    padding: 0 5px;
+    justify-content: space-between;
+}
+
+.theme-toggle i {
+    font-size: 16px;
+    color: #ffd43b;
+    z-index: 1;
+}
+
+.theme-toggle .fa-moon {
+    color: #a9b7ff;
+}
+
+.theme-toggle .toggle-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #fff;
+    transition: transform 0.3s ease;
+}
+
+[data-theme="dark"] .theme-toggle .toggle-thumb {
+    transform: translateX(30px);
+    background-color: #242526;
 }
 
 .new-chat-btn {
@@ -89,6 +185,7 @@ body {
     margin-bottom: 10px;
     text-transform: uppercase;
     letter-spacing: 1px;
+    transition: color 0.3s ease;
 }
 
 .features ul {
@@ -101,13 +198,15 @@ body {
     align-items: center;
     color: var(--text-color);
     font-size: 14px;
+    transition: color 0.3s ease;
 }
 
 .features li i {
     margin-right: 10px;
-    color: var(--primary-color);
+    color: var(--feature-icon-color);
     width: 20px;
     text-align: center;
+    transition: color 0.3s ease;
 }
 
 /* Main Content Styles */
@@ -116,12 +215,14 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    transition: background-color 0.3s ease;
 }
 
 .chat-container {
     flex: 1;
     overflow-y: auto;
     padding: 30px;
+    transition: background-color 0.3s ease;
 }
 
 .welcome-message {
@@ -132,16 +233,19 @@ body {
     background-color: var(--white);
     border-radius: var(--border-radius);
     box-shadow: var(--shadow);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .welcome-message h2 {
     margin-bottom: 10px;
     color: var(--primary-color);
+    transition: color 0.3s ease;
 }
 
 .welcome-message p {
     margin-bottom: 20px;
     color: var(--light-text);
+    transition: color 0.3s ease;
 }
 
 .file-type-icons {
@@ -149,6 +253,7 @@ body {
     justify-content: center;
     gap: 15px;
     margin-top: 30px;
+    flex-wrap: wrap;
 }
 
 .file-type {
@@ -157,12 +262,14 @@ body {
     align-items: center;
     font-size: 14px;
     color: var(--light-text);
+    transition: color 0.3s ease;
 }
 
 .file-type i {
     font-size: 24px;
     margin-bottom: 5px;
     color: var(--primary-color);
+    transition: color 0.3s ease;
 }
 
 /* Message Styles */
@@ -187,16 +294,18 @@ body {
     box-shadow: var(--shadow);
     position: relative;
     overflow: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .user-message .message-content {
-    background-color: var(--primary-color);
-    color: white;
+    background-color: var(--user-bubble-bg);
+    color: var(--user-bubble-text);
     border-bottom-right-radius: 0;
 }
 
 .bot-message .message-content {
-    background-color: var(--white);
+    background-color: var(--bot-bubble-bg);
+    color: var(--bot-bubble-text);
     border-bottom-left-radius: 0;
 }
 
@@ -253,7 +362,8 @@ body {
 .input-container {
     padding: 20px;
     background-color: var(--white);
-    border-top: 1px solid #eaecef;
+    border-top: 1px solid var(--input-border);
+    transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 #chat-form {
@@ -291,9 +401,11 @@ body {
 #user-input {
     flex: 1;
     padding: 15px 15px 15px 40px;
-    border: 1px solid #eaecef;
+    border: 1px solid var(--input-border);
     border-radius: var(--border-radius);
     font-size: 16px;
+    background-color: var(--input-bg);
+    color: var(--input-text);
     transition: var(--transition);
 }
 
@@ -322,6 +434,189 @@ body {
     background-color: var(--secondary-color);
 }
 
+/* Thinking animation - enhanced version */
+.thinking-message .message-content {
+    display: flex;
+    align-items: center;
+    height: 40px;
+}
+
+.thinking-dots {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.thinking-dot {
+    height: 8px;
+    width: 8px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    margin: 0 3px;
+    opacity: 0.6;
+}
+
+.thinking-dot:nth-child(1) {
+    animation: thinking-bounce 1.4s infinite 0s;
+}
+
+.thinking-dot:nth-child(2) {
+    animation: thinking-bounce 1.4s infinite 0.2s;
+}
+
+.thinking-dot:nth-child(3) {
+    animation: thinking-bounce 1.4s infinite 0.4s;
+}
+
+@keyframes thinking-bounce {
+    0%, 80%, 100% {
+        transform: translateY(0);
+        opacity: 0.6;
+    }
+    40% {
+        transform: translateY(-8px);
+        opacity: 1;
+    }
+}
+
+/* File drag and drop area */
+.file-drop-area {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(108, 99, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.file-drop-area.active {
+    visibility: visible;
+    opacity: 1;
+}
+
+.drop-message {
+    background-color: var(--white);
+    padding: 40px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    transition: background-color 0.3s ease;
+}
+
+.drop-message i {
+    font-size: 48px;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+.drop-message p {
+    font-size: 18px;
+    color: var(--text-color);
+}
+
+.sending {
+    transform: scale(0.9);
+}
+
+/* File handling styles */
+.file-badge {
+    display: flex;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 6px 10px;
+    border-radius: 30px;
+    margin-right: 10px;
+    max-width: 100%;
+    overflow: hidden;
+    transition: background-color 0.3s ease;
+}
+
+[data-theme="dark"] .file-badge {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.file-badge i {
+    margin-right: 8px;
+}
+
+.file-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 150px;
+}
+
+.file-size {
+    color: var(--light-text);
+    font-size: 0.8em;
+    margin-left: 5px;
+}
+
+.processing-info {
+    font-size: 0.8em;
+    color: var(--light-text);
+    margin-top: 5px;
+    padding: 5px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+[data-theme="dark"] .processing-info {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.system-message {
+    background-color: rgba(255, 193, 7, 0.1) !important;
+    border-left: 3px solid #ffc107;
+    color: var(--text-color) !important;
+}
+
+/* File Processing Progress Indicator */
+.file-progress {
+    height: 4px;
+    width: 100%;
+    background: var(--input-border);
+    border-radius: 2px;
+    margin-top: 5px;
+    overflow: hidden;
+}
+
+.file-progress-bar {
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+    animation: progress-animation 1.5s infinite ease-in-out;
+}
+
+@keyframes progress-animation {
+    0% { width: 10%; }
+    50% { width: 80%; }
+    100% { width: 10%; }
+}
+
+/* Empty state styling */
+.empty-chat {
+    text-align: center;
+    color: var(--light-text);
+    padding: 20px;
+}
+
+.empty-chat i {
+    font-size: 48px;
+    color: var(--light-text);
+    margin-bottom: 15px;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .app-container {
@@ -332,7 +627,7 @@ body {
         width: 100%;
         height: auto;
         border-right: none;
-        border-bottom: 1px solid #eaecef;
+        border-bottom: 1px solid var(--sidebar-border);
         padding: 15px;
     }
     
@@ -347,4 +642,17 @@ body {
     .message-content {
         max-width: 90%;
     }
+    
+    .theme-toggle {
+        margin-left: auto;
+    }
+}
+
+/* Dark mode code highlighting override */
+[data-theme="dark"] .markdown-content pre {
+    background-color: #1e1e1e;
+}
+
+[data-theme="dark"] .hljs {
+    background-color: #1e1e1e;
 }

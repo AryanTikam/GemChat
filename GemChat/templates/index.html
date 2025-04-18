@@ -1,6 +1,6 @@
 <!-- templates/index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,13 +12,23 @@
 <body>
     <div class="app-container">
         <div class="sidebar">
-            <div class="logo">
-                <i class="fas fa-robot"></i>
-                <h1>GemChat</h1>
+            <div class="top-bar">
+                <div class="logo">
+                    <i class="fas fa-robot"></i>
+                    <h1>GemChat</h1>
+                </div>
+                
+                <div class="theme-toggle" id="theme-toggle">
+                    <i class="fas fa-sun"></i>
+                    <i class="fas fa-moon"></i>
+                    <div class="toggle-thumb"></div>
+                </div>
             </div>
+            
             <button id="new-chat" class="new-chat-btn">
                 <i class="fas fa-plus"></i> New Chat
             </button>
+            
             <div class="features">
                 <h3>Features</h3>
                 <ul>
@@ -36,7 +46,7 @@
         <div class="main-content">
             <div class="chat-container" id="chat-container">
                 <div class="welcome-message">
-                    <h2>Welcome to Gemini AI Assistant</h2>
+                    <h2>Welcome to GemChat</h2>
                     <p>Upload files or ask questions to get started</p>
                     <div class="file-type-icons">
                         <div class="file-type"><i class="fas fa-file-pdf"></i> PDF</div>
