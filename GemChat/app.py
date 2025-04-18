@@ -88,7 +88,7 @@ def classify_query(llm, query):
     Classification:
     """
     prompt = classification_prompt.format(query=query)
-    response = llm.predict(prompt)  # Use predict instead of generate_content
+    response = llm.predict(prompt) 
     return response.strip().lower()
 
 def handle_date_query(query):
@@ -121,7 +121,15 @@ def extract_text_from_pdf(file):
 def process_image(file):
     """Extract text from images using OCR and perform basic analysis"""
     try:
+        # Reset file pointer
+        file.seek(0)
+        
+        # Open the image
         image = Image.open(file)
+        
+        # Validate image format
+        if image.format not in ['JPEG', 'PNG', 'BMP', 'TIFF']:
+            return "Unsupported image format."
         
         # Create a summary of image properties
         image_info = {
@@ -142,13 +150,19 @@ def process_image(file):
             result += "No text detected in the image.\n"
             
         # Save a compressed version if it's a large image
-        if os.path.getsize(file.name) > 1000000:  # If larger than 1MB
+        file.seek(0)
+        file_size = len(file.read())  # Get file size in memory
+        if file_size > 1000000:  # If larger than 1MB
             output = BytesIO()
             image.save(output, format=image.format, optimize=True, quality=85)
-            compression_ratio = os.path.getsize(file.name) / output.tell()
+            compression_ratio = file_size / output.tell()
             result += f"\nImage compressed by {compression_ratio:.2f}x"
         
         return result
+    except IOError as e:
+        return f"Error opening image: {str(e)}"
+    except pytesseract.TesseractError as e:
+        return f"Error with Tesseract OCR: {str(e)}"
     except Exception as e:
         return f"Error processing image: {str(e)}"
 
