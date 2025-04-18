@@ -215,12 +215,14 @@ def process_video(file):
         return f"Error processing video: {str(e)}"
 
 def _process_zip_member(zip_ref, member):
-    """Process a single file from a zip archive"""
+    """Process a single file from a zip archive with better content handling"""
     filename = os.path.basename(member.filename)
     ext = os.path.splitext(filename)[1].lower()
     
-    # Skip directories and empty files
-    if member.is_dir() or member.file_size == 0:
+    # Skip directories, empty files, and files over 10MB
+    if member.is_dir() or member.file_size == 0 or member.file_size > 10 * 1024 * 1024:
+        if member.file_size > 10 * 1024 * 1024:
+            return {'filename': filename, 'content': "File too large to process (over 10MB)."}
         return None
         
     try:
@@ -229,58 +231,113 @@ def _process_zip_member(zip_ref, member):
         stream = BytesIO(raw)
         stream.name = filename  # Add filename attribute for compatibility
         
+        # Set a reasonable size limit for text extraction
+        MAX_TEXT_LENGTH = 10000
+        
+        # Process based on file type
         if ext == '.pdf':
             content = extract_text_from_pdf(stream)
         elif ext in ['.jpg', '.jpeg', '.png', '.bmp', '.tiff']:
-            content = process_image(stream)
+            content = "Image file detected - skipping detailed processing in ZIP context."
         elif ext in ['.mp3', '.wav', '.ogg', '.flac']:
-            content = transcribe_audio(stream)
+            content = "Audio file detected - skipping transcription in ZIP context."
         elif ext in ['.mp4', '.avi', '.mov', '.mkv']:
-            content = process_video(stream)
+            content = "Video file detected - skipping analysis in ZIP context."
         elif ext == '.csv':
-            df = pd.read_csv(BytesIO(raw), encoding='utf-8')
-            content = df.to_string()
+            # For CSV files, read rows but limit the output
+            try:
+                df = pd.read_csv(BytesIO(raw), encoding='utf-8', nrows=100)
+                content = {
+                    'text': df.head(5).to_string(),
+                    'columns': df.columns.tolist(),
+                    'rows': len(df),
+                    'sample': "First 5 rows shown above"
+                }
+                content = json.dumps(content, indent=2)
+            except:
+                content = "CSV file could not be parsed."
         elif ext == '.json':
-            obj = json.loads(raw.decode('utf-8', errors='ignore'))
-            content = json.dumps(obj, indent=2)
+            try:
+                obj = json.loads(raw.decode('utf-8', errors='ignore'))
+                # Limit JSON representation to avoid very large outputs
+                content = json.dumps(obj, indent=2)[:MAX_TEXT_LENGTH] + "..."
+            except:
+                content = "JSON file could not be parsed."
         elif ext in ['.txt', '.py', '.js', '.html', '.css']:
-            content = raw.decode('utf-8', errors='ignore')
+            content = raw.decode('utf-8', errors='ignore')[:MAX_TEXT_LENGTH]
+            if len(content) == MAX_TEXT_LENGTH:
+                content += "\n... (content truncated)"
         else:
-            return None
+            return {'filename': filename, 'content': f"Unsupported file type: {ext}"}
 
-        # Limit content to first 5000 chars to avoid overwhelming the model
-        snippet = content[:5000] + ('...' if len(content) > 5000 else '')
-        return {'filename': filename, 'content': snippet}
+        return {'filename': filename, 'content': content}
     except Exception as e:
         return {'filename': filename, 'content': f"Error processing {filename}: {str(e)}"}
 
 def extract_from_zip(file):
-    """Extract and process contents from a zip file"""
+    """Extract and process contents from a zip file with better user query handling"""
     try:
-        result = []
+        MAX_ZIP_SIZE = 50 * 1024 * 1024  # 50MB limit
+        MAX_FILES_TO_PROCESS = 20  # Process at most 20 files from a ZIP
+        
         zip_file_bytes = file.read()
+        
+        # Check file size
+        if len(zip_file_bytes) > MAX_ZIP_SIZE:
+            return "ZIP file is too large to process. Please use a ZIP file under 50MB."
+        
         zip_bytesio = BytesIO(zip_file_bytes)
+        result = []
         
         with zipfile.ZipFile(zip_bytesio) as zip_ref:
-            # Get a list of all non-directory members
-            members = [m for m in zip_ref.infolist() if not m.is_dir()]
+            # Get list of all files in the zip
+            all_files = zip_ref.namelist()
             
-            # Process each file in parallel using a thread pool
+            # Get a list of non-directory members, limit the number of files
+            members = [m for m in zip_ref.infolist() if not m.is_dir()]
+            if len(members) > MAX_FILES_TO_PROCESS:
+                members = members[:MAX_FILES_TO_PROCESS]
+                file_limit_notice = f"Note: Only processing the first {MAX_FILES_TO_PROCESS} files as the ZIP contains {len(all_files)} files."
+            else:
+                file_limit_notice = ""
+            
+            # Process each file with timeouts
             with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-                futures = [executor.submit(_process_zip_member, zip_ref, m) for m in members]
-                for future in concurrent.futures.as_completed(futures):
-                    entry = future.result()
-                    if entry:
-                        result.append(entry)
+                future_to_member = {
+                    executor.submit(_process_zip_member, zip_ref, m): m 
+                    for m in members
+                }
+                
+                # Add a timeout of 30 seconds per file
+                for future in concurrent.futures.as_completed(future_to_member, timeout=30):
+                    try:
+                        entry = future.result()
+                        if entry:
+                            result.append(entry)
+                    except concurrent.futures.TimeoutError:
+                        member = future_to_member[future]
+                        result.append({
+                            'filename': member.filename,
+                            'content': "Processing timed out for this file."
+                        })
+                    except Exception as e:
+                        member = future_to_member[future]
+                        result.append({
+                            'filename': member.filename, 
+                            'content': f"Error processing file: {str(e)}"
+                        })
         
-        # Format the results into a string
+        # Format the results
         if result:
-            output = "ZIP Archive Contents:\n\n"
+            output = {
+                "zip_summary": f"ZIP archive with {len(all_files)} files{' - ' + file_limit_notice if file_limit_notice else ''}",
+                "files": {}
+            }
+            
             for entry in result:
-                output += f"File: {entry['filename']}\n"
-                output += f"{'=' * (len(entry['filename']) + 6)}\n"
-                output += f"{entry['content']}\n\n"
-            return output
+                output["files"][entry['filename']] = entry['content']
+                
+            return json.dumps(output, indent=2)
         else:
             return "ZIP file processed, but no readable content was found."
     except zipfile.BadZipFile:
@@ -352,9 +409,14 @@ def chat():
             "type": os.path.splitext(file.filename)[1][1:].upper()
         }
     
-    # Prepare the input for the LangChain conversation
+    # Prepare the input for the LangChain conversation with better guidance
     if file_content:
-        input_text = f"I've uploaded a file: {file.filename}. Here's the content or analysis:\n\n{file_content}\n\nMy question or request is: {user_message}"
+        ext = os.path.splitext(file.filename)[1].lower()
+        
+        if ext == '.zip':
+            input_text = f"I've uploaded a ZIP file: {file.filename}. Here's the extracted content: {file_content}. Based on the above extracted content from the ZIP file, please answer this specific question: {user_message}. If the question refers to specific files or data within the ZIP, please focus on those parts of the content."
+        else:
+            input_text = f"I've uploaded a file: {file.filename}. Here's the content or analysis:\n\n{file_content}\n\nMy question or request is: {user_message}"
     else:
         input_text = user_message
     
